@@ -1,0 +1,16 @@
+{
+  "name": "gospelsub-pure",
+  "version": "1.0.0",
+  "description": "gospelsub in web, written in purescript",
+  "main": "pure.js",
+  "directories": {
+    "test": "test"
+  },
+  "scripts": {
+    "test": "pulp test",
+    "build": "pulp build --to pure.js",
+    "run": "pulp run"
+  },
+  "author": "",
+  "license": "ISC"
+}
