@@ -2,15 +2,20 @@
   "name": "gospelsub-pure",
   "version": "1.0.0",
   "description": "gospelsub in web, written in purescript",
-  "main": "pure.js",
+  "main": "main.js",
   "directories": {
     "test": "test"
   },
   "scripts": {
     "test": "pulp test",
-    "build": "pulp build --to pure.js",
+    "build": "pulp build --to public/main.js",
     "run": "pulp run"
   },
   "author": "",
-  "license": "ISC"
+  "license": "ISC",
+  "dependencies": {
+    "@material/mwc-button": "^0.21.0",
+    "@webcomponents/webcomponentsjs": "^2.5.0",
+    "react": "^17.0.2"
+  }
 }

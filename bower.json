@@ -9,7 +9,8 @@
   "dependencies": {
     "purescript-prelude": "^5.0.0",
     "purescript-console": "^5.0.0",
-    "purescript-effect": "^3.0.0"
+    "purescript-effect": "^3.0.0",
+    "purescript-react-basic-hooks": "^7.0.0"
   },
   "devDependencies": {
     "purescript-psci-support": "^5.0.0"
