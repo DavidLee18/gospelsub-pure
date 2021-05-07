@@ -8,3 +8,5 @@
 /.purs*
 /.psa*
 /.firebase/
+pure.js
+public/main.js
