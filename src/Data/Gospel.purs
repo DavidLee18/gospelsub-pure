@@ -80,7 +80,7 @@ instance decodeJsonKey :: DecodeJson Key where
 
 data Verse
     = Verse String
-    | NumberedVerse Int String
+   -- | NumberedVerse Int String
     | TaggedVerse Key String
 
 derive instance eqVerse :: Eq Verse
@@ -90,8 +90,7 @@ instance showVerse :: Show Verse where show = genericShow
 instance encodeJsonVerse :: EncodeJson Verse where
     encodeJson (Verse s) = encodeJson s
     encodeJson (TaggedVerse (Key c) s) = encodeJson $ fromCharArray ['[', c, ']'] <> s
-    encodeJson (TaggedVerse (Special _) s) = encodeJson s
-    encodeJson (NumberedVerse n s) = encodeJson $ show n <> ". " <> s
+    encodeJson (TaggedVerse _ s) = encodeJson s
 
 instance decodeJsonVerse :: DecodeJson Verse where
     decodeJson json = do
@@ -99,24 +98,18 @@ instance decodeJsonVerse :: DecodeJson Verse where
         let cs = toCharArray s
         case take 3 cs of
             ['[', c, ']'] -> pure $ TaggedVerse (Key c) (fromCharArray $ drop 3 cs)
-            [n, '.', ' '] -> do
-                n' <- (decodeJson <<< encodeJson) $ n
-                pure $ NumberedVerse n' s
-            v -> pure $ Verse $ fromCharArray v
+            [n, '.', ' '] -> pure $ TaggedVerse (Key n) s
+                --n' <- decodeJson <<< encodeJson $ n --doesn't work, don't know why
+            v -> pure $ Verse s
 
 
 key :: Verse -> Maybe Key
 key (Verse _) = Nothing
 key (TaggedVerse k _) = Just k
-key (NumberedVerse n _) = case toChar $ show n of
-                            Just c -> Just $ Key c
-                            Nothing -> Nothing
 
 keyVerse :: Key -> Verse -> Maybe String
 keyVerse _ (Verse _)= Nothing
 keyVerse k (TaggedVerse k' s) = if k == k' then Just s else Nothing
-keyVerse (Key k) (NumberedVerse n s) = if show k == show n then Just s else Nothing
-keyVerse (Special _) (NumberedVerse _ _) = Nothing
 
 findVerse :: Key -> Gospel -> Maybe Verse
 findVerse k (Gospel { lyrics }) = find (isJust <<< keyVerse k) lyrics
