@@ -104,12 +104,12 @@ instance decodeJsonVerse :: DecodeJson Verse where
 
 
 key :: Verse -> Maybe Key
-key (Verse _) = Nothing
 key (TaggedVerse k _) = Just k
+key _ = Nothing
 
 keyVerse :: Key -> Verse -> Maybe String
-keyVerse _ (Verse _)= Nothing
-keyVerse k (TaggedVerse k' s) = if k == k' then Just s else Nothing
+keyVerse k (TaggedVerse k' s) | k == k' = Just s
+keyVerse _ _ = Nothing
 
 findVerse :: Key -> Gospel -> Maybe Verse
 findVerse k (Gospel { lyrics }) = find (isJust <<< keyVerse k) lyrics

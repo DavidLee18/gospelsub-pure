@@ -10,10 +10,11 @@
     "purescript-prelude": "^5.0.0",
     "purescript-console": "^5.0.0",
     "purescript-effect": "^3.0.0",
-    "purescript-react-basic-hooks": "^7.0.0",
     "purescript-argonaut": "^8.0.0",
     "purescript-aff": "^6.0.0",
-    "purescript-aff-promise": "^3.0.0"
+    "purescript-aff-promise": "^3.0.0",
+    "purescript-halogen": "^6.1.2",
+    "purescript-routing": "^10.0.1"
   },
   "devDependencies": {
     "purescript-psci-support": "^5.0.0"
