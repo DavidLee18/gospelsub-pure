@@ -6,7 +6,7 @@ exports.toSelectedDetailImpl = function (Just) {
             const detail = event.detail;
             const i = detail.index;
             return i instanceof Set && typeof detail.diff !== 'undefined'
-            ? { index: Array.from(i), diff: Just(detail.diff) }
+            ? { index: Array.from(i).sort(), diff: Just(detail.diff) }
             : { index: Array.of(i), diff: Nothing };
         }
     }
