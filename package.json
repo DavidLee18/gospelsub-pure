@@ -7,17 +7,16 @@
     "test": "test"
   },
   "scripts": {
-    "test": "pulp test",
-    "build": "pulp build --to pure.js && webpack --config webpack.config.js",
-    "run": "pulp run"
+    "test": "spago test",
+    "build": "spago bundle-app --to pure.js && webpack --config webpack.config.js",
+    "run": "spago run"
   },
   "author": "",
   "license": "ISC",
   "dependencies": {
     "@material/mwc-button": "^0.21.0",
     "@material/mwc-list": "^0.21.0",
-    "@webcomponents/webcomponentsjs": "^2.5.0",
-    "react": "^17.0.2"
+    "@webcomponents/webcomponentsjs": "^2.5.0"
   },
   "devDependencies": {
     "webpack": "^5.37.0",

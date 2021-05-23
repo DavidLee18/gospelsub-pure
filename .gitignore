@@ -1,6 +1,8 @@
 /bower_components/
 /node_modules/
 /.pulp-cache/
+/.psci_modules/
+/.spago/
 /output/
 /generated-docs/
 /.psc-package/
@@ -8,8 +10,6 @@
 /.purs*
 /.psa*
 /.firebase/
-pure.js
-public/main.js
-public/import.js
-public/import.js.LICENSE.txt
-public/main.js.LICENSE.txt
+*.js
+public/*.js
+public/*.txt
