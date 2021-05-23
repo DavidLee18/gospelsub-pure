@@ -4,8 +4,8 @@ exports.firestore = function () {
     return firebase.firestore();
 }
 
-exports.doc = function (fs) {
-    return function (path) {
+exports.doc = function (path) {
+    return function (fs) {
         return function () {
             return fs.doc(path);
         }
@@ -22,16 +22,16 @@ exports.readDocPromise = function (Just) {
     }
 }
 
-exports.collection = function (fs) {
-    return function (path) {
+exports.collection = function (path) {
+    return function (fs) {
         return function () {
             return fs.collection(path);
         }
     }
 }
 
-exports.addToCollectionPromise = function(colRef) {
-    return function(data) {
+exports.addToCollectionPromise = function(data) {
+    return function(colRef) {
         return function() {
             return colRef.add(data);
         }

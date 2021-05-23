@@ -43,7 +43,7 @@ data Action
 main :: Effect Unit
 main = do
     fs <- firestore
-    gospelsCol <- fs `collection` "gospels"
+    gospelsCol <- collection "gospels" fs
     launchAff_ do
         gospelsJson <- readCollection gospelsCol
         let gospels = decodeJson <$> gospelsJson :: Array (Either JsonDecodeError Gospel)
