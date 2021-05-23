@@ -5,7 +5,9 @@ import Prelude
 import Data.Argonaut (JsonDecodeError, decodeJson, printJsonDecodeError)
 import Data.Array (catMaybes)
 import Data.Either (Either, either, hush)
+import Data.Generic.Rep (class Generic)
 import Data.Gospel (Gospel(..))
+import Data.Show.Generic (genericShow)
 import Data.Traversable (traverse_)
 import Effect (Effect)
 import Effect.Aff (launchAff_)
@@ -24,6 +26,9 @@ import Web.Event.Event (Event)
 data Route
     = Home
     | Display
+
+derive instance genericRoute :: Generic Route _
+instance showRoute :: Show Route where show = genericShow
 
 type State =
     { gospels :: Array Gospel
@@ -67,4 +72,6 @@ handleAction (Log event) = do
     let detail = toSelectedDetail event
     logShow detail
     modify_ _ { selectedIndicies = detail.index }
-handleAction (RouteTo route) = modify_ _ { route = route }
+handleAction (RouteTo route) = do
+    log $ "routing to " <> show route <> "..."
+    modify_ _ { route = route }
