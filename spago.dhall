@@ -7,13 +7,14 @@
   , "console"
   , "effect"
   , "either"
-  , "foldable-traversable"
   , "halogen"
   , "maybe"
   , "prelude"
   , "psci-support"
   , "strings"
   , "web-events"
+  , "web-html"
+  , "web-uievents"
   ]
 , packages = ./packages.dhall
 , sources = [ "src/**/*.purs", "test/**/*.purs" ]

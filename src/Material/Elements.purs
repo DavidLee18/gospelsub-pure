@@ -25,6 +25,9 @@ mwc_button props = HE.element (ElemName "mwc-button") props []
 outlined :: forall r i. IProp r i
 outlined = prop (PropName "outlined") true
 
+raised :: forall r i. IProp r i
+raised = prop (PropName "raised") true
+
 label :: forall r i. String -> IProp r i
 label = prop (PropName "label")
 
@@ -38,6 +41,15 @@ icon = prop (PropName "icon")
 
 mwc_circular_progress :: forall r w i. Leaf r w i
 mwc_circular_progress props = HE.element (ElemName "mwc-circular-progress") props []
+
+indeterminate :: forall r i. IProp r i
+indeterminate = prop (PropName "indeterminate") true
+
+mwc_icon_button :: forall r w i. Leaf r w i
+mwc_icon_button props = HE.element (ElemName "mwc-icon-button") props []
+
+disabled :: forall r i. IProp r i
+disabled = prop (PropName "disabled") true
 
 mwc_list :: forall r w i. Node r w i
 mwc_list = HE.element (ElemName "mwc-list")
@@ -53,6 +65,12 @@ multi = prop (PropName "multi") true
 
 mwc_list_item :: forall r w i. Node r w i
 mwc_list_item = HE.element (ElemName "mwc-list-item")
+
+hasMeta :: forall r i. IProp r i
+hasMeta = prop (PropName "hasMeta") true
+
+metaSlot :: forall r i. IProp r i
+metaSlot = prop (PropName "slot") "meta"
 
 mwc_check_list_item :: forall r w i. Node r w i
 mwc_check_list_item = HE.element (ElemName "mwc-check-list-item")
