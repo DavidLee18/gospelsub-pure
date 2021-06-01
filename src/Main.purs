@@ -57,7 +57,7 @@ main = do
         body <- awaitBody
         runUI mainComponent gospels body
 
-mainComponent :: forall q o m. MonadEffect m => Component q (Array (Either JsonDecodeError Gospel)) o m
+mainComponent :: forall query output m. MonadEffect m => Component query (Array (Either JsonDecodeError Gospel)) output m
 mainComponent = mkComponent { initialState: \eithers -> { gospels: catMaybes $ hush <$> eithers, route: Home, subId: Nothing }
                             , render
                             , eval: mkEval $ defaultEval { handleAction = handleAction }
@@ -84,11 +84,14 @@ handleAction (HandleEvent sid keyEvent) = do
     let key = KE.key keyEvent
     let code = KE.code keyEvent
     log $ "keyup code: " <> code <> ", key: " <> key
-    modify_ _ { subId = Just sid }
+    if key == "Escape" then do
+        unsubscribe sid
+        modify_ _ { route = Home, subId = Nothing }
+    else modify_ _ { subId = Just sid }
 handleAction (Log json) = logShow $ toString json
 handleAction (RouteTo Display) = do
     win <- liftEffect window
-    void $ subscribe' \sid -> eventListener keyup (toEventTarget win) ((<$>) (HandleEvent sid) <<< KE.fromEvent)
+    subscribe' \sid -> eventListener keyup (toEventTarget win) ((<$>) (HandleEvent sid) <<< KE.fromEvent)
     modify_ _ { route = Display }
 handleAction (RouteTo route) = do
     state <- get
