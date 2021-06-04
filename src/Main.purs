@@ -2,19 +2,23 @@ module Main where
 
 import Prelude
 
-import Data.Argonaut (Json, JsonDecodeError, decodeJson, toString)
-import Data.Array (catMaybes)
-import Data.Either (Either, hush)
+import Control.Alt ((<|>))
+import Data.Argonaut (Json, JsonDecodeError, decodeJson)
+import Data.Argonaut as Json
+import Data.Array (catMaybes, elemIndex, head, (!!))
+import Data.Either (Either(..), hush)
 import Data.Generic.Rep (class Generic)
-import Data.Gospel (Gospel(..))
+import Data.Gospel (class Listable, Gospel(..), Key(..), Verse, asArray, findVerse, fromString)
+import Data.Gospel as Gospel
 import Data.Maybe (Maybe(..), maybe')
 import Data.Show.Generic (genericShow)
+import Data.Tuple.Nested (type (/\), (/\))
 import Effect (Effect)
 import Effect.Aff (launchAff_)
 import Effect.Class (class MonadEffect, liftEffect)
-import Effect.Class.Console (log, logShow)
+import Effect.Class.Console as Console
 import Effect.Firebase (collection, firestore, readCollection)
-import Halogen (Component, HalogenM, SubscriptionId, defaultEval, get, mkComponent, mkEval, modify_, subscribe', unsubscribe)
+import Halogen (Component, HalogenM, SubscriptionId, defaultEval, gets, mkComponent, mkEval, modify_, subscribe', unsubscribe)
 import Halogen.Aff (awaitBody)
 import Halogen.HTML (HTML)
 import Halogen.HTML as HH
@@ -38,9 +42,19 @@ instance showRoute :: Show Route where show = genericShow
 
 type State =
     { gospels :: Array Gospel
+    , position :: Maybe (Gospel /\ (Either String Verse))
+    , queue :: Array Gospel
     , route :: Route
     , subId :: Maybe SubscriptionId
     }
+
+defaultState :: State
+defaultState = { gospels: []
+               , position: Nothing
+               , queue: []
+               , route: Home
+               , subId: Nothing
+               }
 
 data Action
     = HandleEvent SubscriptionId KeyboardEvent
@@ -58,7 +72,7 @@ main = do
         runUI mainComponent gospels body
 
 mainComponent :: forall query output m. MonadEffect m => Component query (Array (Either JsonDecodeError Gospel)) output m
-mainComponent = mkComponent { initialState: \eithers -> { gospels: catMaybes $ hush <$> eithers, route: Home, subId: Nothing }
+mainComponent = mkComponent { initialState: \eithers -> defaultState { gospels = catMaybes $ hush <$> eithers }
                             , render
                             , eval: mkEval $ defaultEval { handleAction = handleAction }
                             }
@@ -81,20 +95,35 @@ gospelView (Gospel { name, lyrics }) = mwc_list_item [ hasMeta ] [ HH.span_ [ HH
 handleAction :: forall slots output m . MonadEffect m => Action -> HalogenM State Action slots output m Unit
 handleAction (HandleEvent sid keyEvent) = do
     liftEffect $ preventDefault $ KE.toEvent keyEvent
-    let key = KE.key keyEvent
+    let rawKey = KE.key keyEvent
     let code = KE.code keyEvent
-    log $ "keyup code: " <> code <> ", key: " <> key
-    if key == "Escape" then do
-        unsubscribe sid
-        modify_ _ { route = Home, subId = Nothing }
-    else modify_ _ { subId = Just sid }
-handleAction (Log json) = logShow $ toString json
+    Console.log $ "keyup code: " <> code <> ", key: " <> rawKey
+    let key = fromString rawKey
+    maybe' pure (flip handleKey sid) key
+handleAction (Log json) = Console.logShow $ Json.toString json
 handleAction (RouteTo Display) = do
     win <- liftEffect window
-    subscribe' \sid -> eventListener keyup (toEventTarget win) ((<$>) (HandleEvent sid) <<< KE.fromEvent)
-    modify_ _ { route = Display }
+    subscribe' \sid -> eventListener keyup (toEventTarget win) (map (HandleEvent sid) <<< KE.fromEvent)
+    modify_ \st -> st { position = head (_.queue st) >>= \g -> head $ asArray g >>= \c -> pure $ g /\ c, route = Display }
 handleAction (RouteTo route) = do
-    state <- get
-    let sid = _.subId state
+    sid <- gets _.subId
     maybe' pure unsubscribe sid
     modify_ _ { route = route, subId = Nothing }
+
+--verseOn :: Gospel -> Either String Verse -> (Int -> Int) -> Maybe (Either String Verse)
+verseOn :: forall t13 t16. Listable t13 t16 => Eq t16 => t13 -> t16 -> (Int -> Int) -> Maybe t16
+verseOn g v f = elemIndex v es >>= \i -> es !! (f i)
+    where es = asArray g
+
+handleKey :: forall slots output m. Gospel.Key -> SubscriptionId -> HalogenM State Action slots output m Unit
+handleKey (Special Gospel.Esc) sid = do
+        unsubscribe sid
+        modify_ _ { route = Home, subId = Nothing }
+handleKey (Key c) sid = do
+    pos <- gets _.position
+    let found = do
+            g /\ v <- pos
+            v' <- findVerse (Key c) g
+            pure $ g /\ (pure v')
+    modify_ _ { position = found <|> pos, subId = Just sid }
+handleKey _ _ = pure unit

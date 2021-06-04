@@ -3,7 +3,7 @@ module Data.Gospel where
 import Prelude
 
 import Data.Argonaut (class DecodeJson, class EncodeJson, JsonDecodeError(..), decodeJson, encodeJson, (.:), (.:?))
-import Data.Array (drop, find, take)
+import Data.Array (drop, find, take, (:))
 import Data.Either (Either(..), note)
 import Data.Generic.Rep (class Generic)
 import Data.Maybe (Maybe(..), isJust)
@@ -39,6 +39,7 @@ data SpecialKey
     | PageUp
     | PageDown
     | Esc
+    | FunctionKey Int
 
 derive instance eqSpecialKey :: Eq SpecialKey
 derive instance genericSpecialKey :: Generic SpecialKey _
@@ -76,6 +77,10 @@ instance decodeJsonKey :: DecodeJson Key where
             _ -> do
                 s' <- decodeJson <<< encodeJson $ s
                 pure $ Special s'
+
+fromString :: String -> Maybe Key
+fromString "Escape" = Just $ Special Esc
+fromString _ = Nothing
 
 
 data Verse
@@ -122,3 +127,15 @@ parseInt = parseIntImpl Just Nothing
 
 onlyNatural :: Int -> Maybe Int
 onlyNatural i = if i >= 1 then Just i else Nothing
+
+showTitle :: Gospel -> String
+showTitle (Hymn { index, name }) = show index <> ". " <> name
+showTitle (Gospel { name }) = "- " <> name <> " -"
+
+class Listable l i where
+  asArray :: l -> Array i
+
+instance listableGospelEitherStringVerse :: Listable Gospel (Either String Verse)
+    where
+        asArray g@(Gospel { lyrics }) = Left (showTitle g) : (Right <$> lyrics)
+        asArray g@(Hymn { lyrics }) = Left (showTitle g) : (Right <$> lyrics)
