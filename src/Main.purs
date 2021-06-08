@@ -5,13 +5,20 @@ import Prelude
 import Control.Alt ((<|>))
 import Data.Argonaut (Json, JsonDecodeError, decodeJson)
 import Data.Argonaut as Json
-import Data.Array (catMaybes, elemIndex, head, (!!))
+import Data.Array (catMaybes, elemIndex, head, last, (!!))
 import Data.Either (Either(..), hush)
 import Data.Generic.Rep (class Generic)
-import Data.Gospel (class Listable, Gospel(..), Key(..), Verse, asArray, findVerse, fromString)
-import Data.Gospel as Gospel
-import Data.Maybe (Maybe(..), maybe')
+import Data.Gospel (Gospel, findVerse, showTitle)
+import Data.Gospel.Key (Key(..))
+import Data.Gospel.Key as Key
+import Data.Gospel.SpecialKey as SpecialKey
+import Data.Gospel.Verse (Verse)
+import Data.Gospel.Verse as Verse
+import Data.Listable (class Listable, asArray)
+import Data.Maybe (Maybe(..), fromMaybe, maybe')
 import Data.Show.Generic (genericShow)
+import Data.String.Read (read)
+import Data.Tuple (snd)
 import Data.Tuple.Nested (type (/\), (/\))
 import Effect (Effect)
 import Effect.Aff (launchAff_)
@@ -23,13 +30,14 @@ import Halogen.Aff (awaitBody)
 import Halogen.HTML (HTML)
 import Halogen.HTML as HH
 import Halogen.HTML.Events (onClick)
+import Halogen.HTML.Properties (style)
 import Halogen.Query.Event (eventListener)
 import Halogen.VDom.Driver (runUI)
 import Material.Elements (IconName(..), hasMeta, icon, label, metaSlot, multi, mwc_button, mwc_icon_button, mwc_list, mwc_list_item, raised)
 import Web.Event.Event (preventDefault)
 import Web.HTML (window)
 import Web.HTML.Window (toEventTarget)
-import Web.UIEvent.KeyboardEvent (KeyboardEvent)
+import Web.UIEvent.KeyboardEvent (KeyboardEvent, altKey)
 import Web.UIEvent.KeyboardEvent as KE
 import Web.UIEvent.KeyboardEvent.EventTypes (keyup)
 
@@ -46,6 +54,7 @@ type State =
     , queue :: Array Gospel
     , route :: Route
     , subId :: Maybe SubscriptionId
+    , textSize :: Int
     }
 
 defaultState :: State
@@ -54,6 +63,7 @@ defaultState = { gospels: []
                , queue: []
                , route: Home
                , subId: Nothing
+               , textSize: 70
                }
 
 data Action
@@ -82,15 +92,12 @@ render { gospels, route: Home } = HH.div_ [ HH.text "Hello Halogen!"
                                           , mwc_list [ multi ] $ gospelView <$> gospels
                                           , mwc_button [ raised, label "Display", onClick $ \_ -> RouteTo Display ]
                                           ]
-render { route: Display } = HH.div_ [ HH.h2_ [ HH.text "Display Page!" ] ]
+render { position, route: Display, textSize } = HH.div_ [ HH.h2 [ style $ "font-size: " <> show textSize <> "px;" ] [ HH.text $ fromMaybe "Display Page!" $ map Verse.string =<< hush <<< snd <$> position ] ]
 
 gospelView :: forall w i. Gospel -> HTML w i
-gospelView (Hymn { index, name, lyrics }) = mwc_list_item [ hasMeta ] [ HH.span_ [ HH.text $ show index <> ". " <> name ]
-                                                                      , mwc_icon_button [ metaSlot, icon $ IconName "add_circle_outline" ]
-                                                                      ]
-gospelView (Gospel { name, lyrics }) = mwc_list_item [ hasMeta ] [ HH.span_ [ HH.text name ]
-                                                                 , mwc_icon_button [ metaSlot, icon (IconName "add_circle_outline") ]
-                                                                 ]
+gospelView g = mwc_list_item [ hasMeta ] [ HH.span_ [ HH.text $ showTitle g ]
+                                         , mwc_icon_button [ metaSlot, icon $ IconName "add_circle_outline" ]
+                                         ]
 
 handleAction :: forall slots output m . MonadEffect m => Action -> HalogenM State Action slots output m Unit
 handleAction (HandleEvent sid keyEvent) = do
@@ -98,32 +105,72 @@ handleAction (HandleEvent sid keyEvent) = do
     let rawKey = KE.key keyEvent
     let code = KE.code keyEvent
     Console.log $ "keyup code: " <> code <> ", key: " <> rawKey
-    let key = fromString rawKey
+    let key = if altKey keyEvent then read $ "Alt " <> rawKey else read rawKey
     maybe' pure (flip handleKey sid) key
+    modify_ _ { subId = Just sid }
 handleAction (Log json) = Console.logShow $ Json.toString json
 handleAction (RouteTo Display) = do
     win <- liftEffect window
     subscribe' \sid -> eventListener keyup (toEventTarget win) (map (HandleEvent sid) <<< KE.fromEvent)
-    modify_ \st -> st { position = head (_.queue st) >>= \g -> head $ asArray g >>= \c -> pure $ g /\ c, route = Display }
+    modify_ \st -> st { position = head (_.queue st) >>= \g -> head $ asArray g >>= \t -> pure $ g /\ t, route = Display }
 handleAction (RouteTo route) = do
     sid <- gets _.subId
     maybe' pure unsubscribe sid
     modify_ _ { route = route, subId = Nothing }
 
---verseOn :: Gospel -> Either String Verse -> (Int -> Int) -> Maybe (Either String Verse)
-verseOn :: forall t13 t16. Listable t13 t16 => Eq t16 => t13 -> t16 -> (Int -> Int) -> Maybe t16
-verseOn g v f = elemIndex v es >>= \i -> es !! (f i)
+verseOnIndex :: (Int -> Int) -> Gospel -> Either String Verse -> Maybe (Either String Verse)
+--verseOnIndex :: forall t13 t16. Listable t13 t16 => Eq t16 => (Int -> Int) -> t13 -> t16 -> Maybe t16
+verseOnIndex f g v = elemIndex v es >>= \i -> es !! (f i)
     where es = asArray g
 
-handleKey :: forall slots output m. Gospel.Key -> SubscriptionId -> HalogenM State Action slots output m Unit
-handleKey (Special Gospel.Esc) sid = do
-        unsubscribe sid
-        modify_ _ { route = Home, subId = Nothing }
-handleKey (Key c) sid = do
+verseOnArray :: (Int -> Array (Either String Verse) -> Maybe (Either String Verse)) -> Gospel -> Either String Verse -> Maybe (Either String Verse)
+--verseOnArray :: forall t21 t24 t25. Listable t21 t25 => Eq t25 => (Int -> Array t25 -> Maybe t24) -> t21 -> t25 -> Maybe t24
+verseOnArray f g v = elemIndex v es >>= \i -> f i es
+    where es = asArray g
+--(a -> b -> m b) -> m (t a b) -> m (t a b)
+mapPosition :: forall m. Monad m => (Gospel -> Either String Verse -> m (Either String Verse)) -> m (Gospel /\ (Either String Verse)) -> m (Gospel /\ (Either String Verse))
+--mapPosition :: forall m t24 t34 t35. Monad m => (t34 -> t24 -> m t35) -> m (t34 /\ t24) -> m (t34 /\ t35)
+mapPosition f p = p >>= \(g /\ v) -> f g v >>= \v' -> pure $ g /\ v'
+
+--gospelOnIndex :: (Int -> Int) -> Gospel -> Array Gospel -> Maybe Gospel
+gospelOnIndex :: forall t404. Eq t404 => (Int -> Int) -> t404 -> Array t404 -> Maybe t404
+gospelOnIndex f g gs = elemIndex g gs >>= \i -> gs !! (f i)
+
+handleKey :: forall slots output m. Key.Key -> SubscriptionId -> HalogenM State Action slots output m Unit
+handleKey (Key c) _ = do
     pos <- gets _.position
-    let found = do
-            g /\ v <- pos
-            v' <- findVerse (Key c) g
-            pure $ g /\ (pure v')
-    modify_ _ { position = found <|> pos, subId = Just sid }
-handleKey _ _ = pure unit
+    modify_ _ { position = mapPosition (\g _ -> Right <$> findVerse (Key c) g) pos <|> pos }
+handleKey (Special SpecialKey.Esc) sid = do
+    unsubscribe sid
+    modify_ _ { route = Home, subId = Nothing }
+handleKey (Special SpecialKey.UpArrow) _ = modify_ \st -> st { textSize = _.textSize st + 5 }
+handleKey (Special SpecialKey.DownArrow) _ = do
+    size <- gets _.textSize
+    modify_ _ { textSize = if size - 5 > 0 then size - 5 else size }
+handleKey (Special SpecialKey.LeftArrow) _ = do
+    pos <- gets _.position
+    modify_ _ { position = mapPosition (verseOnIndex (_ - 1)) pos <|> pos }
+handleKey (Special SpecialKey.RightArrow) _ = do
+    pos <- gets _.position
+    modify_ _ { position = mapPosition (verseOnIndex (_ + 1)) pos <|> pos }
+handleKey (Special SpecialKey.Home) _ = do
+    pos <- gets _.position
+    modify_ _ { position = mapPosition (verseOnIndex \_ -> 0) pos <|> pos }
+handleKey (Special SpecialKey.End) _ = do
+    pos <- gets _.position
+    modify_ _ { position = mapPosition (verseOnArray $ const last) pos <|> pos }
+handleKey (Special SpecialKey.PageUp) _ = do
+    q <- gets _.queue
+    pos <- gets _.position
+    let newPos = pos >>= \(g /\ v) -> gospelOnIndex (_ - 1) g q >>= \g' -> head $ asArray g' >>= \t' -> pure $ g' /\ t'
+    modify_ _ { position = newPos <|> pos }
+handleKey (Special SpecialKey.PageDown) _ = do
+    q <- gets _.queue
+    pos <- gets _.position
+    let newPos = pos >>= \(g /\ v) -> gospelOnIndex (_ + 1) g q >>= \g' -> head $ asArray g' >>= \t' -> pure $ g' /\ t'
+    modify_ _ { position = newPos <|> pos }
+handleKey (Special (SpecialKey.AltKey n)) _ = do
+    q <- gets _.queue
+    pos <- gets _.position
+    let newPos = pos >>= \(g /\ v) -> gospelOnIndex (\_ -> n) g q >>= \g' -> head $ asArray g' >>= \t' -> pure $ g' /\ t'
+    modify_ _ { position = newPos <|> pos }
