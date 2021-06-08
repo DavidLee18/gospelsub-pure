@@ -1,4 +1,4 @@
-module Data.NestedExtend where
+module Control.NestedExtend where
 
 import Prelude
 
