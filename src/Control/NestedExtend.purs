@@ -2,19 +2,17 @@ module Control.NestedExtend where
 
 import Prelude
 
-import Control.Extend (class Extend)
-import Data.Gospel (Gospel)
-import Data.Maybe (Maybe(..))
+import Control.Comonad (class Comonad)
+import Data.Maybe (Maybe)
 import Data.Tuple (Tuple)
-import Data.Tuple.Nested ((/\))
+import Data.Tuple.Nested (type (/\), (/\))
 
-class Extend w <= NestedExtend w m
-    where nestedExtend :: forall a b. (w a -> m b) -> w a -> m (w b)
+class (Comonad w, Monad m) <= NestedExtend w m where
+  nestedExtend :: forall a b. (w a -> m b) -> w a -> m (w b)
 
 infixr 1 nestedExtend as <<>=
 
-instance nestedExtendTupleMaybe :: NestedExtend (Tuple Gospel) Maybe
+instance nestedExtendTupleMaybe :: NestedExtend (Tuple g) Maybe
     where
-        nestedExtend f a@(g /\ v) = case f a of
-            Nothing -> Nothing
-            Just v' -> Just $ g /\ v'
+        nestedExtend :: forall a b c. (c /\ a -> Maybe b) -> c /\ a -> Maybe (c /\ b)
+        nestedExtend f a@(g /\ v) = f a >>= \v' -> pure $ g /\ v'

@@ -3,9 +3,11 @@ module Main where
 import Prelude
 
 import Control.Alt ((<|>))
+import Control.Comonad (extract)
 import Data.Argonaut (Json, JsonDecodeError, decodeJson)
 import Data.Argonaut as Json
-import Data.Array (catMaybes, elemIndex, head, last, (!!))
+import Data.Array (catMaybes, delete, drop, dropEnd, elemIndex, head, last, null, splitAt, take, takeEnd, (!!))
+import Data.Array as Array
 import Data.Either (Either(..), hush)
 import Data.Generic.Rep (class Generic)
 import Data.Gospel (Gospel, findVerse, showTitle)
@@ -18,7 +20,6 @@ import Data.Listable (class Listable, asArray)
 import Data.Maybe (Maybe(..), fromMaybe, maybe')
 import Data.Show.Generic (genericShow)
 import Data.String.Read (read)
-import Data.Tuple (snd)
 import Data.Tuple.Nested (type (/\), (/\))
 import Effect (Effect)
 import Effect.Aff (launchAff_)
@@ -27,13 +28,14 @@ import Effect.Class.Console as Console
 import Effect.Firebase (collection, firestore, readCollection)
 import Halogen (Component, HalogenM, SubscriptionId, defaultEval, gets, mkComponent, mkEval, modify_, subscribe', unsubscribe)
 import Halogen.Aff (awaitBody)
-import Halogen.HTML (HTML)
+import Halogen.HTML (HTML, li)
 import Halogen.HTML as HH
 import Halogen.HTML.Events (onClick)
 import Halogen.HTML.Properties (style)
+import Halogen.HTML.Properties.ARIA (role)
 import Halogen.Query.Event (eventListener)
 import Halogen.VDom.Driver (runUI)
-import Material.Elements (IconName(..), hasMeta, icon, label, metaSlot, multi, mwc_button, mwc_icon_button, mwc_list, mwc_list_item, raised)
+import Material.Elements (IconName(..), SelectedDetail, disabled, divider, hasMeta, icon, label, left, metaSlot, multi, mwc_button, mwc_check_list_item, mwc_icon_button, mwc_list, mwc_list_item, onSelected, padded, raised)
 import Web.Event.Event (preventDefault)
 import Web.HTML (window)
 import Web.HTML.Window (toEventTarget)
@@ -53,6 +55,7 @@ type State =
     , position :: Maybe (Gospel /\ (Either String Verse))
     , queue :: Array Gospel
     , route :: Route
+    , selectedIndicies :: Array Int
     , subId :: Maybe SubscriptionId
     , textSize :: Int
     }
@@ -62,13 +65,19 @@ defaultState = { gospels: []
                , position: Nothing
                , queue: []
                , route: Home
+               , selectedIndicies: []
                , subId: Nothing
                , textSize: 70
                }
 
 data Action
-    = HandleEvent SubscriptionId KeyboardEvent
+    = AddtoQueue
+    | HandleKeyEvent SubscriptionId KeyboardEvent
+    | HandleSelectedEvent SelectedDetail
     | Log Json
+    | QueueDown Gospel
+    | QueueUp Gospel
+    | RemovefromQueue Gospel
     | RouteTo Route
 
 main :: Effect Unit
@@ -88,19 +97,25 @@ mainComponent = mkComponent { initialState: \eithers -> defaultState { gospels =
                             }
 
 render :: forall w. State -> HTML w Action
-render { gospels, route: Home } = HH.div_ [ HH.text "Hello Halogen!"
-                                          , mwc_list [ multi ] $ gospelView <$> gospels
-                                          , mwc_button [ raised, label "Display", onClick $ \_ -> RouteTo Display ]
-                                          ]
-render { position, route: Display, textSize } = HH.div_ [ HH.h2 [ style $ "font-size: " <> show textSize <> "px;" ] [ HH.text $ fromMaybe "Display Page!" $ map Verse.string =<< hush <<< snd <$> position ] ]
+render { gospels, queue, route: Home } = HH.div_ [ HH.text "Hello Halogen!"
+                                                 , mwc_list [ multi, onSelected HandleSelectedEvent ] $ map gospelView gospels <> [ li [ divider, role "seperator", padded ] [] ] <> map queueItemView queue
+                                                 , mwc_button [ label "Add to Queue", icon $ IconName "add_circle_outline", onClick $ const AddtoQueue ]
+                                                 , mwc_button $ [ raised, label "Display", onClick $ const $ RouteTo Display ] <> if null queue then [ disabled ] else []
+                                                 ]
+render { position, route: Display, textSize } = HH.div_ [ HH.h2 [ style $ "font-size: " <> show textSize <> "px;" ] [ HH.text $ fromMaybe "Loading Gospels..." $ map Verse.string =<< hush <<< extract <$> position ] ]
 
 gospelView :: forall w i. Gospel -> HTML w i
-gospelView g = mwc_list_item [ hasMeta ] [ HH.span_ [ HH.text $ showTitle g ]
-                                         , mwc_icon_button [ metaSlot, icon $ IconName "add_circle_outline" ]
-                                         ]
+gospelView g = mwc_check_list_item [ left ] [ HH.text $ showTitle g ]
+
+queueItemView :: forall w. Gospel -> HTML w Action
+queueItemView g = mwc_list_item [ hasMeta ] [ HH.span_ [ HH.text $ showTitle g ]
+                                            , mwc_icon_button [ metaSlot, icon $ IconName "remove_circle_outline", onClick \_ -> RemovefromQueue g ]
+                                            , mwc_icon_button [ metaSlot, icon $ IconName "arrow_upward", onClick \_ -> QueueUp g ]
+                                            , mwc_icon_button [ metaSlot, icon $ IconName "arrow_downward", onClick \_ -> QueueDown g ]
+                                            ]
 
 handleAction :: forall slots output m . MonadEffect m => Action -> HalogenM State Action slots output m Unit
-handleAction (HandleEvent sid keyEvent) = do
+handleAction (HandleKeyEvent sid keyEvent) = do
     liftEffect $ preventDefault $ KE.toEvent keyEvent
     let rawKey = KE.key keyEvent
     let code = KE.code keyEvent
@@ -111,12 +126,38 @@ handleAction (HandleEvent sid keyEvent) = do
 handleAction (Log json) = Console.logShow $ Json.toString json
 handleAction (RouteTo Display) = do
     win <- liftEffect window
-    subscribe' \sid -> eventListener keyup (toEventTarget win) (map (HandleEvent sid) <<< KE.fromEvent)
+    subscribe' \sid -> eventListener keyup (toEventTarget win) (map (HandleKeyEvent sid) <<< KE.fromEvent)
     modify_ \st -> st { position = head (_.queue st) >>= \g -> head $ asArray g >>= \t -> pure $ g /\ t, route = Display }
 handleAction (RouteTo route) = do
     sid <- gets _.subId
     maybe' pure unsubscribe sid
     modify_ _ { route = route, subId = Nothing }
+handleAction AddtoQueue = do
+    indicies <- gets _.selectedIndicies
+    gs <- gets _.gospels
+    let toQueues = catMaybes do
+            i <- indicies
+            pure $ Array.index gs i
+    modify_ _ { queue = toQueues }
+handleAction (RemovefromQueue g) = modify_ \st -> st { queue = delete g $ _.queue st }
+handleAction (QueueUp g) = do
+    q <- gets _.queue
+    let newQueue = do
+            i <- elemIndex g q
+            let { before, after } = splitAt i q
+            let newBefore = dropEnd 1 before <> [ g ] <> takeEnd 1 before
+            let newAfter = drop 1 after
+            pure $ newBefore <> newAfter
+    modify_ _ { queue = fromMaybe q newQueue }
+handleAction (QueueDown g) = do
+    q <- gets _.queue
+    let newQueue = do
+            i <- elemIndex g q
+            let { before, after } = splitAt i q
+            let newAfter = take 1 (drop 1 after) <> [ g ] <> drop 2 after
+            pure $ before <> newAfter
+    modify_ _ { queue = fromMaybe q newQueue }
+handleAction (HandleSelectedEvent { index: indicies }) = modify_ _ { selectedIndicies = indicies }
 
 verseOnIndex :: (Int -> Int) -> Gospel -> Either String Verse -> Maybe (Either String Verse)
 --verseOnIndex :: forall t13 t16. Listable t13 t16 => Eq t16 => (Int -> Int) -> t13 -> t16 -> Maybe t16

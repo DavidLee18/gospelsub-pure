@@ -1,5 +1,7 @@
 module Material.Elements where
 
+import Prelude
+
 import Data.Maybe (Maybe(..))
 import Halogen (ElemName(..), PropName(..))
 import Halogen.HTML.Core (class IsProp, toPropValue)
@@ -16,8 +18,8 @@ type SelectedDetail = { index :: Array Int, diff :: Maybe IndexDiff }
 
 foreign import toSelectedDetailImpl :: (forall a. a -> Maybe a) -> (forall a. Maybe a) -> Event -> SelectedDetail
 
-toSelectedDetail :: Event -> SelectedDetail
-toSelectedDetail = toSelectedDetailImpl Just Nothing
+selectedDetail :: Event -> SelectedDetail
+selectedDetail = toSelectedDetailImpl Just Nothing
 
 mwc_button :: forall r w i. Leaf r w i
 mwc_button props = HE.element (ElemName "mwc-button") props []
@@ -54,14 +56,23 @@ disabled = prop (PropName "disabled") true
 mwc_list :: forall r w i. Node r w i
 mwc_list = HE.element (ElemName "mwc-list")
 
-onSelected :: forall r i. (Event -> i) -> IProp r i
-onSelected = handler (EventType "selected")
+onSelected :: forall r i. (SelectedDetail -> i) -> IProp r i
+onSelected f = handler (EventType "selected") $ f <<< selectedDetail
 
 activatable :: forall r i. IProp r i
 activatable = prop (PropName "activatable") true
 
 multi :: forall r i. IProp r i
 multi = prop (PropName "multi") true
+
+nonInteractive :: forall r i. IProp r i
+nonInteractive = prop (PropName "noninteractive") true
+
+divider :: forall r i. IProp r i
+divider = prop (PropName "divider") true
+
+padded :: forall r i. IProp r i
+padded = prop (PropName "padded") true
 
 mwc_list_item :: forall r w i. Node r w i
 mwc_list_item = HE.element (ElemName "mwc-list-item")
