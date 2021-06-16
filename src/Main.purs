@@ -19,7 +19,7 @@ import Data.Gospel.Verse as Verse
 import Data.Listable (class Listable, asArray)
 import Data.Maybe (Maybe(..), fromMaybe, maybe')
 import Data.Show.Generic (genericShow)
-import Data.String (Pattern(..), Replacement(..))
+import Data.String (Pattern(..))
 import Data.String as String
 import Data.String.Read (read)
 import Data.Tuple.Nested (type (/\), (/\))
@@ -30,7 +30,7 @@ import Effect.Class.Console as Console
 import Effect.Firebase (collection, firestore, readCollection)
 import Halogen (Component, HalogenM, SubscriptionId, defaultEval, gets, mkComponent, mkEval, modify_, subscribe', unsubscribe)
 import Halogen.Aff (awaitBody)
-import Halogen.HTML (HTML, li)
+import Halogen.HTML (HTML)
 import Halogen.HTML as HH
 import Halogen.HTML.Events (onClick)
 import Halogen.HTML.Properties (draggable, style)
@@ -101,11 +101,13 @@ mainComponent = mkComponent { initialState: \eithers -> defaultState { gospels =
                             }
 
 render :: forall w. State -> HTML w Action
-render { gospels, queue, route: Home } = HH.div_ [ HH.text "Hello Halogen!"
-                                                 , mwc_list [] $ intersperse (li [ divider, role "seperator" ] []) $ map gospelView gospels
-                                                 , mwc_list [ activatable, onSelected HandleSelectedEvent ] $ intersperse (li [ divider, role "seperator" ] []) $ map queueItemView queue
-                                                 , mwc_button [ label "move up in queue", icon $ IconName "arrow_upward", onClick $ const QueueUp ]
-                                                 , mwc_button [ label "move down in queue", icon $ IconName "arrow_downward", onClick $ const QueueDown ]
+render { gospels, queue, route: Home } = HH.div_ [ HH.h3_ [ HH.text "GospelSub in Halogen" ]
+                                                 , HH.span_ [ HH.text "Gospels" ]
+                                                 , mwc_list [] $ intersperse (HH.li [ divider, role "seperator" ] []) $ map gospelView gospels
+                                                 , HH.span_ [ HH.text "Queue" ]
+                                                 , mwc_list [ activatable, onSelected HandleSelectedEvent ] $ intersperse (HH.li [ divider, role "seperator" ] []) $ map queueItemView queue
+                                                 , mwc_button $ [ label "move up in queue", icon $ IconName "arrow_upward", onClick $ const QueueUp ] <> if null queue then [ disabled ] else []
+                                                 , mwc_button $ [ label "move down in queue", icon $ IconName "arrow_downward", onClick $ const QueueDown ] <> if null queue then [ disabled ] else []
                                                  , mwc_button $ [ raised, label "Display", onClick $ const $ RouteTo Display ] <> if null queue then [ disabled ] else []
                                                  ]
 render { blind, position, route: Display, textSize } = HH.div_ [ HH.h2 [ style $ "font-size: " <> show textSize <> "px;" ] if blind then [] else fromMaybe [ HH.text "Loading Gospels..." ] titleOrVerse ]
@@ -139,7 +141,7 @@ handleAction (RouteTo route) = do
     sid <- gets _.subId
     maybe' pure unsubscribe sid
     modify_ _ { route = route, subId = Nothing }
-handleAction (AddtoQueue g) = modify_ \st -> st { queue = _.queue st `snoc` g }
+handleAction (AddtoQueue g) = modify_ \st -> st { queue = if Array.elem g (_.queue st) then _.queue st else _.queue st `snoc` g }
 handleAction (RemovefromQueue g) = modify_ \st -> st { queue = delete g $ _.queue st }
 handleAction QueueUp = do
     q <- gets _.queue
