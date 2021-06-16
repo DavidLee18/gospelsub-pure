@@ -51,7 +51,8 @@ derive instance genericRoute :: Generic Route _
 instance showRoute :: Show Route where show = genericShow
 
 type State =
-    { gospels :: Array Gospel
+    { blind :: Boolean
+    , gospels :: Array Gospel
     , movingGospel :: Maybe Gospel
     , position :: Maybe (Gospel /\ (Either String Verse))
     , queue :: Array Gospel
@@ -61,7 +62,8 @@ type State =
     }
 
 defaultState :: State
-defaultState = { gospels: []
+defaultState = { blind: false
+               , gospels: []
                , movingGospel: Nothing
                , position: Nothing
                , queue: []
@@ -104,7 +106,7 @@ render { gospels, queue, route: Home } = HH.div_ [ HH.text "Hello Halogen!"
                                                  , mwc_button [ label "move down in queue", icon $ IconName "arrow_downward", onClick $ const QueueDown ]
                                                  , mwc_button $ [ raised, label "Display", onClick $ const $ RouteTo Display ] <> if null queue then [ disabled ] else []
                                                  ]
-render { position, route: Display, textSize } = HH.div_ [ HH.h2 [ style $ "font-size: " <> show textSize <> "px;" ] [ HH.text $ fromMaybe "Loading Gospels..." $ titleOrVerse ] ]
+render { blind, position, route: Display, textSize } = HH.div_ [ HH.h2 [ style $ "font-size: " <> show textSize <> "px;" ] [ HH.text if blind then "" else fromMaybe "Loading Gospels..." titleOrVerse ] ]
     where titleOrVerse = either identity Verse.string <<< extract <$> position
 
 gospelView :: forall w. Gospel -> HTML w Action
@@ -182,6 +184,7 @@ gospelOnIndex :: forall t404. Eq t404 => (Int -> Int) -> t404 -> Array t404 -> M
 gospelOnIndex f g gs = elemIndex g gs >>= \i -> gs !! (f i)
 
 handleKey :: forall slots output m. Key.Key -> SubscriptionId -> HalogenM State Action slots output m Unit
+handleKey (Key '0') _ = modify_ \st -> st { blind = not $ _.blind st }
 handleKey (Key c) _ = do
     pos <- gets _.position
     modify_ _ { position = mapPosition (\g _ -> Right <$> findVerse (Key c) g) pos <|> pos }
