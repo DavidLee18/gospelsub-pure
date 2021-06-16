@@ -8,7 +8,7 @@ import Data.Argonaut (Json, JsonDecodeError, decodeJson)
 import Data.Argonaut as Json
 import Data.Array (catMaybes, delete, elemIndex, head, intersperse, last, null, snoc, (!!))
 import Data.Array as Array
-import Data.Either (Either(..), hush)
+import Data.Either (Either(..), either, hush)
 import Data.Generic.Rep (class Generic)
 import Data.Gospel (Gospel, findVerse, showTitle)
 import Data.Gospel.Key (Key(..))
@@ -104,7 +104,8 @@ render { gospels, queue, route: Home } = HH.div_ [ HH.text "Hello Halogen!"
                                                  , mwc_button [ label "move down in queue", icon $ IconName "arrow_downward", onClick $ const QueueDown ]
                                                  , mwc_button $ [ raised, label "Display", onClick $ const $ RouteTo Display ] <> if null queue then [ disabled ] else []
                                                  ]
-render { position, route: Display, textSize } = HH.div_ [ HH.h2 [ style $ "font-size: " <> show textSize <> "px;" ] [ HH.text $ fromMaybe "Loading Gospels..." $ map Verse.string =<< hush <<< extract <$> position ] ]
+render { position, route: Display, textSize } = HH.div_ [ HH.h2 [ style $ "font-size: " <> show textSize <> "px;" ] [ HH.text $ fromMaybe "Loading Gospels..." $ titleOrVerse ] ]
+    where titleOrVerse = either identity Verse.string <<< extract <$> position
 
 gospelView :: forall w. Gospel -> HTML w Action
 gospelView g = mwc_list_item [ hasMeta ] [ HH.span_ [ HH.text $ showTitle g ] 
