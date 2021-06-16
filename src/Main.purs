@@ -19,6 +19,8 @@ import Data.Gospel.Verse as Verse
 import Data.Listable (class Listable, asArray)
 import Data.Maybe (Maybe(..), fromMaybe, maybe')
 import Data.Show.Generic (genericShow)
+import Data.String (Pattern(..), Replacement(..))
+import Data.String as String
 import Data.String.Read (read)
 import Data.Tuple.Nested (type (/\), (/\))
 import Effect (Effect)
@@ -106,8 +108,8 @@ render { gospels, queue, route: Home } = HH.div_ [ HH.text "Hello Halogen!"
                                                  , mwc_button [ label "move down in queue", icon $ IconName "arrow_downward", onClick $ const QueueDown ]
                                                  , mwc_button $ [ raised, label "Display", onClick $ const $ RouteTo Display ] <> if null queue then [ disabled ] else []
                                                  ]
-render { blind, position, route: Display, textSize } = HH.div_ [ HH.h2 [ style $ "font-size: " <> show textSize <> "px;" ] [ HH.text if blind then "" else fromMaybe "Loading Gospels..." titleOrVerse ] ]
-    where titleOrVerse = either identity Verse.string <<< extract <$> position
+render { blind, position, route: Display, textSize } = HH.div_ [ HH.h2 [ style $ "font-size: " <> show textSize <> "px;" ] if blind then [] else fromMaybe [ HH.text "Loading Gospels..." ] titleOrVerse ]
+    where titleOrVerse = Array.intersperse HH.br_ <<< map HH.text <<< String.split (Pattern "\\n") <<< either identity Verse.string <<< extract <$> position
 
 gospelView :: forall w. Gospel -> HTML w Action
 gospelView g = mwc_list_item [ hasMeta ] [ HH.span_ [ HH.text $ showTitle g ] 
