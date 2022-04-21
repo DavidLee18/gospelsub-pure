@@ -189,6 +189,22 @@ gospelOnIndex f g gs = elemIndex g gs >>= \i -> gs !! (f i)
 
 handleKey :: forall slots output m. Key.Key -> SubscriptionId -> HalogenM State Action slots output m Unit
 handleKey (Key '0') _ = modify_ \st -> st { blind = not $ _.blind st }
+handleKey (Key '/') _ = do
+    pos <- gets _.position
+    modify_ _ { position = mapPosition (verseOnIndex \_ -> 0) pos <|> pos }
+handleKey (Key '\\') _ = do
+    pos <- gets _.position
+    modify_ _ { position = mapPosition (verseOnArray $ const last) pos <|> pos }
+handleKey (Key ',') _ = do
+    q <- gets _.queue
+    pos <- gets _.position
+    let newPos = pos >>= \(g /\ v) -> gospelOnIndex (_ - 1) g q >>= \g' -> head $ asArray g' >>= \t' -> pure $ g' /\ t'
+    modify_ _ { position = newPos <|> pos }
+handleKey (Key '.') _ = do
+    q <- gets _.queue
+    pos <- gets _.position
+    let newPos = pos >>= \(g /\ v) -> gospelOnIndex (_ + 1) g q >>= \g' -> head $ asArray g' >>= \t' -> pure $ g' /\ t'
+    modify_ _ { position = newPos <|> pos }
 handleKey (Key c) _ = do
     pos <- gets _.position
     modify_ _ { position = mapPosition (\g _ -> Right <$> findVerse (Key c) g) pos <|> pos }
@@ -205,24 +221,9 @@ handleKey (Special SpecialKey.LeftArrow) _ = do
 handleKey (Special SpecialKey.RightArrow) _ = do
     pos <- gets _.position
     modify_ _ { position = mapPosition (verseOnIndex (_ + 1)) pos <|> pos }
-handleKey (Special SpecialKey.Home) _ = do
-    pos <- gets _.position
-    modify_ _ { position = mapPosition (verseOnIndex \_ -> 0) pos <|> pos }
-handleKey (Special SpecialKey.End) _ = do
-    pos <- gets _.position
-    modify_ _ { position = mapPosition (verseOnArray $ const last) pos <|> pos }
-handleKey (Special SpecialKey.PageUp) _ = do
-    q <- gets _.queue
-    pos <- gets _.position
-    let newPos = pos >>= \(g /\ v) -> gospelOnIndex (_ - 1) g q >>= \g' -> head $ asArray g' >>= \t' -> pure $ g' /\ t'
-    modify_ _ { position = newPos <|> pos }
-handleKey (Special SpecialKey.PageDown) _ = do
-    q <- gets _.queue
-    pos <- gets _.position
-    let newPos = pos >>= \(g /\ v) -> gospelOnIndex (_ + 1) g q >>= \g' -> head $ asArray g' >>= \t' -> pure $ g' /\ t'
-    modify_ _ { position = newPos <|> pos }
 handleKey (Special (SpecialKey.AltKey n)) _ = do
     q <- gets _.queue
     pos <- gets _.position
     let newPos = pos >>= \(g /\ v) -> gospelOnIndex (\_ -> n) g q >>= \g' -> head $ asArray g' >>= \t' -> pure $ g' /\ t'
     modify_ _ { position = newPos <|> pos }
+handleKey (Special _) _ = pure unit
