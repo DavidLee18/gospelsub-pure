@@ -21,6 +21,8 @@
     "@webcomponents/webcomponentsjs": "^2.5.0"
   },
   "devDependencies": {
+    "purescript": "^0.15.2",
+    "spago": "^0.20.9",
     "webpack": "^5.37.0",
     "webpack-cli": "^4.7.0"
   }

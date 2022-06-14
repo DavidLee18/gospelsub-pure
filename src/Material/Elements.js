@@ -1,6 +1,6 @@
 "use strict";
 
-exports.toSelectedDetailImpl = function (Just) {
+export function toSelectedDetailImpl (Just) {
     return function(Nothing) {
         return function(event) {
             const detail = event.detail;

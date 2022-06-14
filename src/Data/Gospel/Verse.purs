@@ -19,6 +19,7 @@ data Verse
     | TaggedVerse Key String
 
 derive instance eqVerse :: Eq Verse
+derive instance ordVerse :: Ord Verse
 derive instance genericVerse :: Generic Verse _
 instance showVerse :: Show Verse where show = genericShow
 instance readVerse :: Read Verse

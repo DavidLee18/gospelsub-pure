@@ -24,6 +24,7 @@ data SpecialKey
     | RightArrow
 
 derive instance eqSpecialKey :: Eq SpecialKey
+derive instance ordSpecialKey :: Ord SpecialKey
 derive instance genericSpecialKey :: Generic SpecialKey _
 instance showSpecialKey :: Show SpecialKey where show = genericShow
 instance readSpecialKey :: Read SpecialKey

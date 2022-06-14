@@ -1,10 +1,10 @@
 "use strict";
 
-exports.firestore = function () {
+export function firestore () {
     return firebase.firestore();
 }
 
-exports.doc = function (path) {
+export function doc (path) {
     return function (fs) {
         return function () {
             return fs.doc(path);
@@ -12,7 +12,7 @@ exports.doc = function (path) {
     }
 }
 
-exports.readDocPromise = function (Just) {
+export function readDocPromise (Just) {
     return function (Nothing) {
         return function (docRef) {
             return function () {
@@ -22,7 +22,7 @@ exports.readDocPromise = function (Just) {
     }
 }
 
-exports.collection = function (path) {
+export function collection (path) {
     return function (fs) {
         return function () {
             return fs.collection(path);
@@ -30,7 +30,7 @@ exports.collection = function (path) {
     }
 }
 
-exports.addToCollectionPromise = function(data) {
+export function addToCollectionPromise(data) {
     return function(colRef) {
         return function() {
             return colRef.add(data);
@@ -38,7 +38,7 @@ exports.addToCollectionPromise = function(data) {
     }
 }
 
-exports.readCollectionPromise = function(colRef) {
+export function readCollectionPromise(colRef) {
     return function() {
         return colRef.get().then(snapshot => snapshot.docs.filter(doc => doc.exists).map(doc => doc.data()));
     }

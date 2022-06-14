@@ -16,6 +16,7 @@ data Key
     | Special SpecialKey
 
 derive instance eqKey :: Eq Key
+derive instance ordKey :: Ord Key
 derive instance genericKey :: Generic Key _
 instance showKey :: Show Key where show = genericShow
 instance readKey :: Read Key
