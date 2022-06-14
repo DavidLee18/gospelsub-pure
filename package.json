@@ -21,6 +21,7 @@
     "@webcomponents/webcomponentsjs": "^2.5.0"
   },
   "devDependencies": {
+    "esbuild": "^0.14.43",
     "purescript": "^0.15.2",
     "spago": "^0.20.9",
     "webpack": "^5.37.0",
