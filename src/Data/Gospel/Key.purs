@@ -15,20 +15,20 @@ data Key
     = Key Char
     | Special SpecialKey
 
-derive instance eqKey :: Eq Key
-derive instance ordKey :: Ord Key
-derive instance genericKey :: Generic Key _
-instance showKey :: Show Key where show = genericShow
-instance readKey :: Read Key
+derive instance Eq Key
+derive instance Ord Key
+derive instance Generic Key _
+instance Show Key where show = genericShow
+instance Read Key
     where read s = case length s of
             1 -> Key <$> toChar s
             _ -> Special <$> read s
 
-instance encodeJsonKey :: EncodeJson Key where
+instance EncodeJson Key where
     encodeJson (Key c) = encodeJson c
     encodeJson (Special s) = encodeJson s
 
-instance decodeJsonKey :: DecodeJson Key where
+instance DecodeJson Key where
     decodeJson json = do
         s <- decodeJson json
         note (UnexpectedValue json) $ read s

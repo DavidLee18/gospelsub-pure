@@ -10,6 +10,7 @@
 /.purs*
 /.psa*
 /.firebase/
-*.js
+pure.js
 public/*.js
 public/*.txt
+.DS_Store

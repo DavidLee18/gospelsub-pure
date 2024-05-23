@@ -8,7 +8,7 @@ import Data.Generic.Rep (class Generic)
 import Data.Int as Int
 import Data.Maybe (Maybe(..))
 import Data.Show.Generic (genericShow)
-import Data.String.CodeUnits (toCharArray)
+import Data.String.CodeUnits (singleton, toCharArray)
 import Data.String.Read (class Read, read)
 
 data SpecialKey
@@ -23,11 +23,11 @@ data SpecialKey
     | LeftArrow
     | RightArrow
 
-derive instance eqSpecialKey :: Eq SpecialKey
-derive instance ordSpecialKey :: Ord SpecialKey
-derive instance genericSpecialKey :: Generic SpecialKey _
-instance showSpecialKey :: Show SpecialKey where show = genericShow
-instance readSpecialKey :: Read SpecialKey
+derive instance Eq SpecialKey
+derive instance Ord SpecialKey
+derive instance Generic SpecialKey _
+instance Show SpecialKey where show = genericShow
+instance Read SpecialKey
     where
         read "Home" = Just Home
         read "End" = Just End
@@ -39,12 +39,12 @@ instance readSpecialKey :: Read SpecialKey
         read "ArrowLeft" = Just LeftArrow
         read "ArrowRight" = Just RightArrow
         read s = case cs of
-            ['A', 'l', 't', ' ', c] -> map AltKey $ onlyNatural =<< Int.fromString (show c)
+            ['A', 'l', 't', ' ', c] -> map AltKey $ onlyNatural =<< Int.fromString (singleton c)
             _ -> Nothing
             where cs = toCharArray s
 
-instance encodeJsonSpecialKey :: EncodeJson SpecialKey where encodeJson = encodeJson <<< show
-instance decodeJsonSpecialKey :: DecodeJson SpecialKey where
+instance EncodeJson SpecialKey where encodeJson = encodeJson <<< show
+instance DecodeJson SpecialKey where
     decodeJson json = do
         x <- decodeJson json
         note (UnexpectedValue json) $ read x

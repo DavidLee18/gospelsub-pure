@@ -8,23 +8,17 @@
   },
   "scripts": {
     "test": "spago test",
-    "build": "spago bundle-app --to pure.js && webpack --config webpack.config.js",
+    "build": "spago bundle-app --minify --to public/main.js && esbuild src/import.js --bundle --minify --outdir=public",
     "run": "spago run"
   },
   "author": "",
   "license": "ISC",
-  "dependencies": {
-    "@material/mwc-button": "^0.21.0",
-    "@material/mwc-circular-progress": "^0.21.0",
-    "@material/mwc-icon-button": "^0.21.0",
-    "@material/mwc-list": "^0.21.0",
-    "@webcomponents/webcomponentsjs": "^2.5.0"
-  },
   "devDependencies": {
-    "esbuild": "^0.14.43",
+    "esbuild": "^0.21.3",
     "purescript": "^0.15.2",
-    "spago": "^0.20.9",
-    "webpack": "^5.37.0",
-    "webpack-cli": "^4.7.0"
+    "spago": "^0.20.9"
+  },
+  "dependencies": {
+    "@material/web": "^1.4.1"
   }
 }

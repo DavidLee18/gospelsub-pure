@@ -3,7 +3,7 @@ module Data.Gospel where
 import Prelude
 
 import Data.Argonaut (class DecodeJson, class EncodeJson, decodeJson, encodeJson, (.:), (.:?))
-import Data.Array (find)
+import Data.Array.NonEmpty (NonEmptyArray, find)
 import Data.Generic.Rep (class Generic)
 import Data.Gospel.Key (Key)
 import Data.Gospel.Verse (Verse, keyVerse)
@@ -13,19 +13,19 @@ import Data.Show.Generic (genericShow)
 import Data.Tuple.Nested ((/\))
 
 data Gospel
-    = Gospel { name :: String, lyrics :: Array Verse }
-    | Hymn { index :: Int, name :: String, lyrics :: Array Verse }
+    = Gospel { name :: String, lyrics :: NonEmptyArray Verse }
+    | Hymn { index :: Int, name :: String, lyrics :: NonEmptyArray Verse }
 
-derive instance eqGospel :: Eq Gospel
-derive instance ordGospel :: Ord Gospel
-derive instance genericGospel :: Generic Gospel _
-instance showGospel :: Show Gospel where show = genericShow
+derive instance Eq Gospel
+derive instance Ord Gospel
+derive instance Generic Gospel _
+instance Show Gospel where show = genericShow
 
-instance encodeJsonGospel :: EncodeJson Gospel where
+instance EncodeJson Gospel where
     encodeJson (Gospel g) = encodeJson g
     encodeJson (Hymn h) = encodeJson h
 
-instance decodeJsonGospel :: DecodeJson Gospel where
+instance DecodeJson Gospel where
     decodeJson json = do
         x <- decodeJson json
         name <- x .: "name"

@@ -18,11 +18,11 @@ data Verse
    -- | NumberedVerse Int String
     | TaggedVerse Key String
 
-derive instance eqVerse :: Eq Verse
-derive instance ordVerse :: Ord Verse
-derive instance genericVerse :: Generic Verse _
-instance showVerse :: Show Verse where show = genericShow
-instance readVerse :: Read Verse
+derive instance Eq Verse
+derive instance Ord Verse
+derive instance Generic Verse _
+instance Show Verse where show = genericShow
+instance Read Verse
     where
         read s = case take 3 cs of
             [ '[', c, ']' ] -> pure $ TaggedVerse (Key c) (drop 3 s)
@@ -30,12 +30,12 @@ instance readVerse :: Read Verse
             _ -> pure $ Verse s
             where cs = toCharArray s
 
-instance encodeJsonVerse :: EncodeJson Verse where
+instance EncodeJson Verse where
     encodeJson (Verse s) = encodeJson s
     encodeJson (TaggedVerse (Key c) s) = encodeJson $ fromCharArray [ '[', c, ']' ] <> s
     encodeJson (TaggedVerse _ s) = encodeJson s
 
-instance decodeJsonVerse :: DecodeJson Verse where
+instance DecodeJson Verse where
     decodeJson json = do
         s <- decodeJson json
         note (UnexpectedValue json) $ read s

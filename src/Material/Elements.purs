@@ -1,90 +1,51 @@
 module Material.Elements where
 
-import Prelude
-
-import Data.Maybe (Maybe(..))
 import Halogen (ElemName(..), PropName(..))
-import Halogen.HTML.Core (class IsProp, toPropValue)
+import Halogen.HTML.Core (HTML, text)
 import Halogen.HTML.Elements (Leaf, Node)
 import Halogen.HTML.Elements as HE
-import Halogen.HTML.Events (handler)
 import Halogen.HTML.Properties (IProp, prop)
-import Web.Event.Event (EventType(..))
-import Web.Event.Internal.Types (Event)
 
-type IndexDiff = { added :: Array Int, removed :: Array Int }
+md_filled_button :: forall r w i. Node r w i
+md_filled_button = HE.element (ElemName "md-filled-button")
 
-type SelectedDetail = { index :: Array Int, diff :: Maybe IndexDiff }
+md_outlined_button :: forall r w i. Node r w i
+md_outlined_button = HE.element (ElemName "md-outlined-button")
 
-foreign import toSelectedDetailImpl :: (forall a. a -> Maybe a) -> (forall a. Maybe a) -> Event -> SelectedDetail
+hasIcon :: forall r i. IProp r i
+hasIcon = prop (PropName "hasIcon") true
 
-selectedDetail :: Event -> SelectedDetail
-selectedDetail = toSelectedDetailImpl Just Nothing
-
-mwc_button :: forall r w i. Leaf r w i
-mwc_button props = HE.element (ElemName "mwc-button") props []
-
-outlined :: forall r i. IProp r i
-outlined = prop (PropName "outlined") true
-
-raised :: forall r i. IProp r i
-raised = prop (PropName "raised") true
-
-label :: forall r i. String -> IProp r i
-label = prop (PropName "label")
+trailingIcon :: forall r i. IProp r i
+trailingIcon = prop (PropName "trailingIcon") true
 
 newtype IconName = IconName String
 
-instance isPropIconName :: IsProp IconName where
-    toPropValue (IconName i) = toPropValue i
+md_icon :: forall w i. IconName -> HTML w i
+md_icon (IconName s)= HE.element (ElemName "md-icon") [] [ text s ]
 
-icon :: forall r i. IconName -> IProp r i
-icon = prop (PropName "icon")
+md_filled_icon_button ∷ ∀ r w i. Node r w i
+md_filled_icon_button = HE.element (ElemName "md-filled-icon-button")
 
-mwc_circular_progress :: forall r w i. Leaf r w i
-mwc_circular_progress props = HE.element (ElemName "mwc-circular-progress") props []
+md_outlined_icon_button ∷ ∀ r w i. Node r w i
+md_outlined_icon_button = HE.element (ElemName "md-outlined-icon-button")
+
+md_circular_progress :: forall r w i. Leaf r w i
+md_circular_progress props = HE.element (ElemName "md-circular-progress") props []
+
+fourColor :: forall r i. IProp r i
+fourColor = prop (PropName "fourColor") true
 
 indeterminate :: forall r i. IProp r i
 indeterminate = prop (PropName "indeterminate") true
 
-mwc_icon_button :: forall r w i. Leaf r w i
-mwc_icon_button props = HE.element (ElemName "mwc-icon-button") props []
-
 disabled :: forall r i. IProp r i
 disabled = prop (PropName "disabled") true
 
-mwc_list :: forall r w i. Node r w i
-mwc_list = HE.element (ElemName "mwc-list")
+md_list :: forall r w i. Node r w i
+md_list = HE.element (ElemName "md-list")
 
-onSelected :: forall r i. (SelectedDetail -> i) -> IProp r i
-onSelected f = handler (EventType "selected") $ f <<< selectedDetail
+md_list_item :: forall r w i. Node r w i
+md_list_item = HE.element (ElemName "md-list-item")
 
-activatable :: forall r i. IProp r i
-activatable = prop (PropName "activatable") true
-
-multi :: forall r i. IProp r i
-multi = prop (PropName "multi") true
-
-nonInteractive :: forall r i. IProp r i
-nonInteractive = prop (PropName "noninteractive") true
-
-divider :: forall r i. IProp r i
-divider = prop (PropName "divider") true
-
-padded :: forall r i. IProp r i
-padded = prop (PropName "padded") true
-
-mwc_list_item :: forall r w i. Node r w i
-mwc_list_item = HE.element (ElemName "mwc-list-item")
-
-hasMeta :: forall r i. IProp r i
-hasMeta = prop (PropName "hasMeta") true
-
-metaSlot :: forall r i. IProp r i
-metaSlot = prop (PropName "slot") "meta"
-
-mwc_check_list_item :: forall r w i. Node r w i
-mwc_check_list_item = HE.element (ElemName "mwc-check-list-item")
-
-left :: forall r i. IProp r i
-left = prop (PropName "left") true
+md_divider :: forall r w i. Leaf r w i
+md_divider props = HE.element (ElemName "md-divider") props []
