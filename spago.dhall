@@ -13,6 +13,7 @@
   , "maybe"
   , "prelude"
   , "profunctor-lenses"
+  , "quickcheck"
   , "read"
   , "strings"
   , "tuples"
