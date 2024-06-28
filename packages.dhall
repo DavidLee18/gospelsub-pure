@@ -103,3 +103,14 @@ let upstream =
         sha256:1b7ca184d0912f929766a00dd1841a18b18513dd108c7fe3bda61769a1f2e5f2
 
 in  upstream
+with pairing =
+    { dependencies =
+        [ "free"
+        , "functors"
+        , "transformers"
+        ]
+    , repo =
+        "https://github.com/paf31/purescript-pairing.git"
+    , version =
+        "v5.1.0"  -- branch, tag, or commit hash
+    }
